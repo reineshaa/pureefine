@@ -1,33 +1,34 @@
 <?php
+
+header('Content-Type: application/json'); // Wajib ada agar Retrofit tidak bingung
 include '../config/config.php';
 
-$username = $_POST['username'] ?? '';
-$password = $_POST['password'] ?? '';
+$user = $_POST['username'];
+$pass = $_POST['password'];
 
-if (empty($username) || empty($password)) {
-    echo json_encode(["status" => "error", "message" => "Kolom tidak boleh kosong"]);
-    exit();
-}
-
-$query = "SELECT * FROM users WHERE username = '$username'";
+$query = "SELECT * FROM users WHERE username = '$user'";
 $result = mysqli_query($conn, $query);
 
 if (mysqli_num_rows($result) > 0) {
-    $user = mysqli_fetch_assoc($result);
+    $row = mysqli_fetch_assoc($result);
     
-    if (password_verify($password, $user['password'])) {
-        unset($user['password']);
+    // Sesuaikan: apakah password kamu di DB di-hash atau teks biasa?
+    if ($pass == $row['password']) {
         echo json_encode([
             "status" => "success",
-            "message" => "Login Berhasil",
-            "user" => $user
+            "message" => "Login Berhasil"
         ]);
     } else {
-        echo json_encode(["status" => "error", "message" => "Password salah"]);
+        // HTTP 200 tapi status JSON-nya error
+        echo json_encode([
+            "status" => "error",
+            "message" => "Password Salah!" 
+        ]);
     }
 } else {
-    echo json_encode(["status" => "error", "message" => "Username tidak ditemukan"]);
+    echo json_encode([
+        "status" => "error",
+        "message" => "Username Tidak Ditemukan!"
+    ]);
 }
-
-mysqli_close($conn);
 ?>

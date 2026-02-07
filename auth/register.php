@@ -1,27 +1,28 @@
 <?php
-include '../config/config.php';
+header('Content-Type: application/json'); 
+include '../config/config.php'; 
 
-$full_name = $_POST['full_name'];
-$username = $_POST['username'];
-$email = $_POST['email'];
-$password = $_POST['password'];
+if(isset($_POST['username'])) {
+    $email = $_POST['email'];
+    $name  = $_POST['full_name'];
+    $user  = $_POST['username'];
+    $pass  = $_POST['password'];
 
-$checkUser = "SELECT * FROM users WHERE username = '$username'";
-$result = mysqli_query($conn, $checkUser);
-
-if (mysqli_num_rows($result) > 0) {
-    echo json_encode([
-        "status" => "error",
-        "message" => "Username invalid, already taken!"
-    ]);
-} else {
-    $query = "INSERT INTO users (full_name, username, email, password, role) 
-              VALUES ('$name', '$username', '$email', '$password', 'user')";
+    $check = mysqli_query($conn, "SELECT * FROM users WHERE username = '$user'");
     
-    if (mysqli_query($conn, $query)) {
-        echo json_encode(["status" => "success", "message" => "Account created"]);
+    if (mysqli_num_rows($check) > 0) {
+        echo json_encode(["status" => "error", "message" => "Username sudah terdaftar!"]);
     } else {
-        echo json_encode(["status" => "error", "message" => "Registration failed"]);
+        $query = "INSERT INTO users (email, full_name, username, password, role) 
+                  VALUES ('$email', '$name', '$user', '$pass', 'user')";
+        
+        if (mysqli_query($conn, $query)) {
+            echo json_encode(["status" => "success", "message" => "Akun berhasil dibuat"]);
+        } else {
+            echo json_encode(["status" => "error", "message" => "Gagal simpan: " . mysqli_error($conn)]);
+        }
     }
+} else {
+    echo json_encode(["status" => "error", "message" => "Data tidak diterima server"]);
 }
 ?>
