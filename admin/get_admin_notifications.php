@@ -1,19 +1,17 @@
 <?php
+header('Content-Type: application/json');
 include '../config/config.php';
 
-$query = "SELECT n.*, u.profile_image 
-          FROM notifications n 
-          JOIN users u ON n.sender_username = u.username 
-          WHERE n.title LIKE '%Request%' 
-          ORDER BY n.created_at DESC";
-
+$query = "SELECT * FROM notifications WHERE user_id IN (SELECT id FROM users WHERE role = 'admin') ORDER BY created_at DESC";
 $result = mysqli_query($conn, $query);
-$notifs = [];
 
-while ($row = mysqli_fetch_assoc($result)) {
-    $notifs[] = $row;
+$notifications = array();
+while($row = mysqli_fetch_assoc($result)) {
+    $row['created_at'] = $row['created_at'] ?? "";
+    $row['message'] = $row['message'] ?? "";
+    $row['status'] = $row['status'] ?? "pending";
+    $notifications[] = $row;
 }
 
-echo json_encode($notifs);
-mysqli_close($conn);
+echo json_encode($notifications);
 ?>

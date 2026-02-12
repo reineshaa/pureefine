@@ -1,29 +1,43 @@
 <?php
 include '../config/config.php';
 
-$request_id = $_POST['request_id'] ?? '';
-$reason = $_POST['reason'] ?? 'Produk tidak sesuai kriteria.';
+$response = array();
 
-if (empty($request_id)) {
-    echo json_encode(["status" => "error", "message" => "ID Request tidak ada"]);
-    exit();
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $request_id = $_POST['id'];
+
+    $getUser = mysqli_query($conn, "SELECT user_id FROM product_requests WHERE id = '$request_id'");
+    $userData = mysqli_fetch_assoc($getUser);
+
+    if ($userData) {
+        $user_id = $userData['user_id'];
+        
+        $sql_update = "UPDATE product_requests SET status = 'declined' WHERE id = '$request_id'";
+        
+        if (mysqli_query($conn, $sql_update)) {
+            $title = "Request Declined";
+            $message = "Sorry, your product request has been declined by the admin.";
+            $status = "declined";
+
+            $sql_notif = "INSERT INTO notifications (user_id, title, message, status) 
+                          VALUES ('$user_id', '$title', '$message', '$status')";
+            
+            mysqli_query($conn, $sql_notif);
+
+            $response['status'] = "success";
+            $response['message'] = "Request declined and notification sent.";
+        } else {
+            $response['status'] = "error";
+            $response['message'] = "Failed to decline request.";
+        }
+    } else {
+        $response['status'] = "error";
+        $response['message'] = "Request ID not found.";
+    }
+} else {
+    $response['status'] = "error";
+    $response['message'] = "Invalid Request Method.";
 }
 
-$req_info = mysqli_query($conn, "SELECT user_id, brand_name FROM product_requests WHERE id = '$request_id'");
-$data = mysqli_fetch_assoc($req_info);
-
-if ($data) {
-    $user_id = $data['user_id'];
-    $brand = $data['brand_name'];
-
-    mysqli_query($conn, "UPDATE product_requests SET status = 'declined' WHERE id = '$request_id'");
-
-    $msg = "Sorry, your request for $brand was declined. Reason: $reason";
-    mysqli_query($conn, "INSERT INTO notifications (user_id, title, message) 
-                        VALUES ('$user_id', 'Request Declined', '$msg')");
-
-    echo json_encode(["status" => "success", "message" => "Request declined."]);
-}
-
-mysqli_close($conn);
+echo json_encode($response);
 ?>

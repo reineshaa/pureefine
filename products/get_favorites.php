@@ -1,25 +1,24 @@
 <?php
+header('Content-Type: application/json');
 include '../config/config.php';
 
-$user_id = $_GET['user_id'] ?? '';
+$user_id = isset($_GET['user_id']) ? $_GET['user_id'] : 0;
 
-if (empty($user_id)) {
-    echo json_encode(["status" => "error", "message" => "User ID kosong"]);
-    exit();
-}
-
-$query = "SELECT p.* FROM products p 
-          JOIN favorites f ON p.id = f.product_id 
-          WHERE f.user_id = '$user_id' 
-          ORDER BY f.id DESC";
+$query = "SELECT p.*, 1 as is_liked 
+          FROM products p
+          INNER JOIN favorites f ON p.id = f.product_id
+          WHERE f.user_id = '$user_id'";
 
 $result = mysqli_query($conn, $query);
-$list = [];
 
-while ($row = mysqli_fetch_assoc($result)) {
-    $list[] = $row;
+if ($result) {
+    $products = array();
+    while ($row = mysqli_fetch_assoc($result)) {    
+        $row['is_liked'] = (int)$row['is_liked'];
+        $products[] = $row;
+    }
+    echo json_encode($products);
+} else {
+    echo json_encode(["status" => "error", "message" => "Gagal mengambil favorit"]);
 }
-
-echo json_encode($list);
-mysqli_close($conn);
 ?>

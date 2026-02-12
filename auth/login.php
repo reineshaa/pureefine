@@ -1,10 +1,17 @@
 <?php
-
-header('Content-Type: application/json'); // Wajib ada agar Retrofit tidak bingung
+header('Content-Type: application/json'); 
 include '../config/config.php';
 
-$user = $_POST['username'];
-$pass = $_POST['password'];
+$user = isset($_POST['username']) ? $_POST['username'] : '';
+$pass = isset($_POST['password']) ? $_POST['password'] : '';
+
+if (empty($user) || empty($pass)) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Username dan Password harus diisi!"
+    ]);
+    exit;
+}
 
 $query = "SELECT * FROM users WHERE username = '$user'";
 $result = mysqli_query($conn, $query);
@@ -12,14 +19,18 @@ $result = mysqli_query($conn, $query);
 if (mysqli_num_rows($result) > 0) {
     $row = mysqli_fetch_assoc($result);
     
-    // Sesuaikan: apakah password kamu di DB di-hash atau teks biasa?
     if ($pass == $row['password']) {
         echo json_encode([
             "status" => "success",
-            "message" => "Login Berhasil"
+            "message" => "Login Berhasil",
+            "user" => [
+                "id" => (int)$row['id'],
+                "full_name" => $row['full_name'],
+                "username" => $row['username'],
+                "role" => $row['role']
+            ]
         ]);
     } else {
-        // HTTP 200 tapi status JSON-nya error
         echo json_encode([
             "status" => "error",
             "message" => "Password Salah!" 

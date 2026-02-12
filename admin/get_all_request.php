@@ -1,19 +1,24 @@
 <?php
 include '../config/config.php';
+header('Content-Type: application/json');
 
-$query = "SELECT pr.*, u.username, u.profile_image 
-          FROM product_requests pr 
-          JOIN users u ON pr.user_id = u.id 
-          WHERE pr.status = 'pending' 
-          ORDER BY pr.created_at DESC";
+$query = mysqli_query($conn, "SELECT requests.*, users.full_name, users.email, users.username 
+                              FROM requests 
+                              JOIN users ON requests.user_id = users.id 
+                              WHERE requests.status = 'pending' 
+                              ORDER BY requests.id DESC");
 
-$result = mysqli_query($conn, $query);
-$requests = [];
+$result = array();
 
-while ($row = mysqli_fetch_assoc($result)) {
-    $requests[] = $row;
+if ($query) {
+    while($row = mysqli_fetch_assoc($query)){
+        $result[] = $row;
+    }
+    echo json_encode($result);
+} else {
+    echo json_encode([
+        "status" => "error",
+        "message" => mysqli_error($conn)
+    ]);
 }
-
-echo json_encode($requests);
-mysqli_close($conn);
 ?>

@@ -1,33 +1,47 @@
 <?php
+header('Content-Type: application/json');
 include '../config/config.php';
 
-$brand_name   = $_POST['brand_name'] ?? '';
+$brand_name = $_POST['brand_name'] ?? '';
 $product_name = $_POST['product_name'] ?? '';
-$category     = $_POST['category'] ?? '';
-$description  = $_POST['description'] ?? '';
-$image_raw    = $_POST['image_base64'] ?? '';
+$category = $_POST['category'] ?? '';
+$description = $_POST['description'] ?? '';
 
-if (empty($brand_name) || empty($product_name) || empty($image_raw)) {
-    echo json_encode(["status" => "error", "message" => "Semua data termasuk gambar wajib diisi!"]);
-    exit();
-}
+$target_dir = "../images/";
+$file_name = time() . "_" . basename($_FILES["image"]["name"]);
+$target_file = $target_dir . $file_name;
 
-$file_name = "prod_" . time() . ".jpg";
-$file_path = "../images/products/" . $file_name;
-
-if (file_put_contents($file_path, base64_decode($image_raw))) {
+if (!empty($brand_name) && !empty($product_name) && isset($_FILES["image"])) {
     
-    $query = "INSERT INTO products (brand_name, product_name, category, description, image) 
-              VALUES ('$brand_name', '$product_name', '$category', '$description', '$file_name')";
-    
-    if (mysqli_query($conn, $query)) {
-        echo json_encode(["status" => "success", "message" => "Produk berhasil ditambahkan!"]);
+    if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
+        
+        $queryProduct = "INSERT INTO products (brand_name, product_name, category, description, image) 
+                         VALUES ('$brand_name', '$product_name', '$category', '$description', '$file_name')";
+        
+        if (mysqli_query($conn, $queryProduct)) {
+            
+            $users = mysqli_query($conn, "SELECT id FROM users WHERE role = 'user'");
+            
+            $titleNotif = "New Product Available!";
+            $messageNotif = "Check out our new product: $product_name from $brand_name. Explore now!";
+
+            while ($user = mysqli_fetch_assoc($users)) {
+                $userId = $user['id'];
+                mysqli_query($conn, "INSERT INTO notifications (user_id, title, message, status) 
+                                     VALUES ('$userId', '$titleNotif', '$messageNotif', 'unread')");
+            }
+
+            echo json_encode([
+                "status" => "success", 
+                "message" => "Product added and notifications sent to all users"
+            ]);
+        } else {
+            echo json_encode(["status" => "error", "message" => "Failed to save product to database"]);
+        }
     } else {
-        echo json_encode(["status" => "error", "message" => "Gagal simpan ke database: " . mysqli_error($conn)]);
+        echo json_encode(["status" => "error", "message" => "Failed to upload image"]);
     }
 } else {
-    echo json_encode(["status" => "error", "message" => "Gagal upload gambar ke server"]);
+    echo json_encode(["status" => "error", "message" => "Incomplete data"]);
 }
-
-mysqli_close($conn);
 ?>

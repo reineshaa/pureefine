@@ -1,33 +1,43 @@
 <?php
 include '../config/config.php';
 
-$request_id = $_POST['request_id'] ?? '';
+$response = array();
 
-$req_query = "SELECT * FROM product_requests WHERE id = '$request_id'";
-$req_res = mysqli_query($conn, $req_query);
-$data = mysqli_fetch_assoc($req_res);
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $request_id = $_POST['id'];
 
-if ($data) {
-    $brand = $data['brand_name'];
-    $product = $data['detail_product'];
-    $category = $data['category'];
-    $user_id = $data['user_id'];
+    $getUser = mysqli_query($conn, "SELECT user_id FROM product_requests WHERE id = '$request_id'");
+    $userData = mysqli_fetch_assoc($getUser);
 
-    $insert_prod = "INSERT INTO products (brand_name, product_name, category) 
-                    VALUES ('$brand', '$product', '$category')";
-    
-    if (mysqli_query($conn, $insert_prod)) {
-        mysqli_query($conn, "UPDATE product_requests SET status = 'approved' WHERE id = '$request_id'");
+    if ($userData) {
+        $user_id = $userData['user_id'];
+        
+        $sql_update = "UPDATE product_requests SET status = 'approved' WHERE id = '$request_id'";
+        
+        if (mysqli_query($conn, $sql_update)) {
+            $title = "Request Approved!";
+            $message = "Your requested product is available now. Check it out!";
+            $status = "approved";
 
-        $msg = "Your request for $brand - $product has been approved and added to catalog!";
-        mysqli_query($conn, "INSERT INTO notifications (user_id, title, message) 
-                            VALUES ('$user_id', 'Request Approved', '$msg')");
+            $sql_notif = "INSERT INTO notifications (user_id, title, message, status) 
+                          VALUES ('$user_id', '$title', '$message', '$status')";
+            
+            mysqli_query($conn, $sql_notif);
 
-        echo json_encode(["status" => "success", "message" => "Request Approved!"]);
+            $response['status'] = "success";
+            $response['message'] = "Request approved and notification sent.";
+        } else {
+            $response['status'] = "error";
+            $response['message'] = "Failed to approve request.";
+        }
+    } else {
+        $response['status'] = "error";
+        $response['message'] = "Request ID not found.";
     }
 } else {
-    echo json_encode(["status" => "error", "message" => "Request tidak ditemukan"]);
+    $response['status'] = "error";
+    $response['message'] = "Invalid Request Method.";
 }
 
-mysqli_close($conn);
+echo json_encode($response);
 ?>

@@ -1,21 +1,26 @@
 <?php
+header('Content-Type: application/json');
 include '../config/config.php';
 
-$category = $_GET['category'] ?? '';
+$user_id = isset($_GET['user_id']) ? $_GET['user_id'] : 0;
 
-if (!empty($category)) {
-    $query = "SELECT * FROM products WHERE category = '$category' ORDER BY id DESC";
-} else {
-    $query = "SELECT * FROM products ORDER BY id DESC";
-}
+$query = "SELECT *, 
+          (SELECT COUNT(*) FROM favorites WHERE favorites.product_id = products.id AND favorites.user_id = '$user_id') as is_liked 
+          FROM products";
 
 $result = mysqli_query($conn, $query);
-$products = [];
 
-while ($row = mysqli_fetch_assoc($result)) {
-    $products[] = $row;
+if ($result) {
+    $products = array();
+    while ($row = mysqli_fetch_assoc($result)) {
+        $row['is_liked'] = (int)$row['is_liked'];
+        $products[] = $row;
+    }
+    echo json_encode($products);
+} else {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Gagal mengambil data produk"
+    ]);
 }
-
-echo json_encode($products);
-mysqli_close($conn);
 ?>
